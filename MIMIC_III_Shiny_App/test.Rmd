@@ -1,0 +1,28 @@
+```{r}
+library(feather)
+
+mimic_data <- read_feather(
+  path = './data/mimic_data_train.feather'
+  #, columns = c('subject_id','hadm_id')
+  )
+#mimic_data$days_until_hospital_exit
+getwd()
+setwd('OneDrive/Documents/Career/Northeastern/Applications_in_DS/MIMIC_III_Shiny_App')
+```
+
+```{r}
+library(ggplot2)
+mimic_data %>%
+  filter(anytime_expire_flag == 1) %>%
+  
+  arrange(desc(days_until_death)) %>%
+  
+  head(5) %>%
+
+# Change the point size, and shape
+ggplot(aes(x=icu_admit_age, y=days_until_death)) +
+  geom_point(shape=23) + 
+  labs(x = 'Age',
+           y = 'Days until Death')
+  
+```

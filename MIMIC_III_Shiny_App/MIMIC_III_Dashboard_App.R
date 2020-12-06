@@ -4,15 +4,35 @@ library(shinydashboard)
 library(glue)
 library(tidyverse)
 library(feather)
+library(arrow)
 library(DT) # Data Tables
 
 # Load data ---------------------------------------------------------
-load("data/movies.Rdata")
-mimic_data <- read_feather('./data/mimic_data_train.feather'
-                           #, columns = c('subject_id','hadm_id')
+mimic_data <- read_feather('./data/mimic_data_test.feather'
                            )
 
-#print(mimic_data$hours_until_icu_admission)
+# Construct the Survival Data
+column_names <- append(c('subject_id'), head(tail(colnames(mimic_data_full), 334), 10000) )
+mimic_data <- mimic_data_full %>% select(column_names)
+trans_mimic_data <- as.data.frame(t(as.matrix(mimic_data)))
+colnames(trans_mimic_data) =as.character(unlist(mimic_data['subject_id']))
+trans_mimic_data <- trans_mimic_data[-c(1), ]
+trans_mimic_data <- rownames_to_column(trans_mimic_data, 'date')
+trans_mimic_data <- gather(trans_mimic_data, key = "subject_id", value = "value", -date)
+trans_mimic_data$date <- as.Date(trans_mimic_data[['date']], format='%Y-%m-%d')
+
+# Dataframe with points of interest
+mimic_data_full <- mimic_data_full[order(mimic_data_full$hours_until_death),] #Ordering helps for table
+vis_metadata <- select(mimic_data_full, c('subject_id','TEST_date_forecast_los_icu','TEST_date_pass_away','TEST_date_leave_hospital','TEST_date_leave_icu')) %>%
+  merge(trans_mimic_data, by='subject_id', how = 'left')
+vis_metadata$TEST_date_forecast_los_icu <- as.Date(vis_metadata$TEST_date_forecast_los_icu, format='%Y-%m-%d')
+vis_metadata$TEST_date_leave_hospital <- as.Date(vis_metadata$TEST_date_leave_hospital, format='%Y-%m-%d')
+vis_metadata$TEST_date_leave_icu <- as.Date(vis_metadata$TEST_date_leave_icu, format='%Y-%m-%d')
+vis_metadata$TEST_date_pass_away <- as.Date(vis_metadata$TEST_date_pass_away, format='%Y-%m-%d')
+TEST_date_forecast_los_icu_df <- select(filter(vis_metadata, vis_metadata$TEST_date_forecast_los_icu == vis_metadata$date), c('subject_id','date','value'))
+TEST_date_leave_hospital_df <- select(filter(vis_metadata, vis_metadata$TEST_date_leave_hospital == vis_metadata$date), c('subject_id','date','value'))
+TEST_date_leave_icu_df <- select(filter(vis_metadata, vis_metadata$TEST_date_leave_icu == vis_metadata$date), c('subject_id','date','value'))
+TEST_date_pass_away_df <- select(filter(vis_metadata, vis_metadata$TEST_date_pass_away == vis_metadata$date), c('subject_id','date','value'))
 
 # Define UI ---------------------------------------------------------
 ui <- dashboardPage(
@@ -42,20 +62,6 @@ ui <- dashboardPage(
             "Total Patients", 
             icon = icon("hospital-user")
           )
-        #   # Value box: avg IMDB rating
-        #   valueBox(
-        #     round(mean(movies$imdb_rating), 2),
-        #     "Avg IMDB score",
-        #     icon = icon("thumbs-up", lib = "glyphicon"),
-        #     color = "fuchsia"
-        #   ),
-        #   # Value box: number of Oscar wins
-        #   valueBox(
-        #     sum(movies$best_pic_win == "yes"),
-        #     "Oscar wins",
-        #     icon = icon("trophy"),
-        #     color = "yellow"
-        #   )
         ),
         # Data reference
         h4("Overview of Patients in the Hospital")
@@ -65,55 +71,7 @@ ui <- dashboardPage(
       tabItem(
         tabName = "patient_view",
         
-        # Row 1
-        # fluidRow(
-        #   # Box: Select title type
-        #   box(
-        #     title = "Select title type", status = "warning", solidHeader = TRUE,
-        #     "Select a title type using the drop down menu below.",
-        #     selectInput(inputId = "title_type", 
-        #                 label = "Title type:",
-        #                 choices = unique(movies$title_type), 
-        #                 selected = "Feature Film")
-        #   )
-        # ),
-        #Row 2
         fluidRow(
-          # Box: Select variables to plot
-        #   box(
-        #     title = "Select variables to plot:",
-        #     status = "primary",
-        #     
-        #     # Select variable for y-axis
-        #     selectInput(inputId = "y", 
-        #                 label = "Y-axis:",
-        #                 choices = c("IMDB rating" = "imdb_rating", 
-        #                             "IMDB number of votes" = "imdb_num_votes", 
-        #                             "Critics Score" = "critics_score", 
-        #                             "Audience Score" = "audience_score", 
-        #                             "Runtime" = "runtime"), 
-        #                 selected = "audience_score"),
-        #     
-        #     # Select variable for x-axis
-        #     selectInput(inputId = "x", 
-        #                 label = "X-axis:",
-        #                 choices = c("IMDB rating" = "imdb_rating", 
-        #                             "IMDB number of votes" = "imdb_num_votes", 
-        #                             "Critics Score" = "critics_score", 
-        #                             "Audience Score" = "audience_score", 
-        #                             "Runtime" = "runtime"), 
-        #                 selected = "critics_score"),
-        #     
-        #     # Select variable for color
-        #     selectInput(inputId = "z", 
-        #                 label = "Color by:",
-        #                 choices = c("Genre" = "genre", 
-        #                             "MPAA Rating" = "mpaa_rating", 
-        #                             "Critics Rating" = "critics_rating", 
-        #                             "Audience Rating" = "audience_rating"),
-        #                 selected = "mpaa_rating")
-        #   ),
-          # Box: plot
           box(
             status = "info",
             plotOutput("scatterplot", height = 260)
@@ -122,7 +80,6 @@ ui <- dashboardPage(
         , fluidRow(
              dataTableOutput('tbl')
         )
-        
       )
     )
   )
@@ -131,51 +88,21 @@ ui <- dashboardPage(
 # Define server function --------------------------------------------
 server <- function(input, output) {
   
-  # Scatterplot
-  # output$scatterplot <- renderPlot({
-  #   movies %>% 
-  #     filter(title_type == input$title_type) %>%
-  #     ggplot(aes_string(x = input$x, y = input$y, 
-  #                       color = input$z)) +
-  #     geom_point() +
-  #     labs(x = prettify_label(input$x),
-  #          y = prettify_label(input$y),
-  #          color = prettify_label(input$z))
-  # })
   output$tbl = renderDT(
-    mimic_data %>%
-      filter(anytime_expire_flag == 1) %>%
-      
-      arrange(desc(days_until_death)) %>%
-      
-      head(5)
+    select(mimic_data_full, c('subject_id','ICU_LOS' ,'TEST_date_forecast_los_icu','risk_class','diagnosis','TEST_date_pass_away'))
   )
   
   output$scatterplot <- renderPlot({
-    mimic_data %>%
-      filter(anytime_expire_flag == 1) %>%
-      
-      arrange(desc(days_until_death)) %>%
-      
-      head(5) %>%
-      
-      # Change the point size, and shape
-      ggplot(aes(x=icu_admit_age, y=days_until_death)) +
-      geom_point(shape=23) + 
-      labs(x = 'Age',
-           y = 'Days until Death')
-    # mimic_data %>% 
-    #   #filter(anytime_expire_flag == input$anytime_expire_flag) %>%
-    #   ggplot(aes_string(x = input$hours_until_icu_admission # $x
-    #                     , y = input$hours_until_death,# $y
-    #                     color = input$anytime_expire_flag 
-    #                     )) +
-    #   geom_point(x = 'hours_until_icu_admission',
-    #              y = 'hours_until_death',
-    #              color = 'anytime_expire_flag') #+
-      # labs(x = 'hours_until_icu_admission',
-      #      y = 'hours_until_death',
-      #      color = 'anytime_expire_flag')
+   # Merge back non-Survival Data
+  trans_mimic_data %>%
+  merge(mimic_data_full, by = 'subject_id') %>%
+  ggplot(aes(x=date, y = value)) +
+  geom_line(aes(color = risk_class, linetype = subject_id)) +  labs(x = 'Date', y = 'Hazard') +
+  # Plot datapoints of interest
+  geom_point(TEST_date_forecast_los_icu_df, mapping= aes(date, value), color = 'blue') +
+  geom_point(TEST_date_leave_icu_df, mapping= aes(date, value), color = 'green') +
+  geom_point(TEST_date_leave_hospital_df, mapping= aes(date, value), color = 'yellow') +
+  geom_point(TEST_date_pass_away_df, mapping= aes(date, value), color = 'red')
   })
 }
 

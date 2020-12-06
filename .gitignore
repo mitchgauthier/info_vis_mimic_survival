@@ -4,3 +4,4 @@ venv/
 .spyproject/
 .ipynb_checkpoints/
 __pycache__/
+*.feather

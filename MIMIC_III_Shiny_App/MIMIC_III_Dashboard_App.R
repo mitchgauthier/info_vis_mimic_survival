@@ -56,7 +56,7 @@ ui <- dashboardPage(
         fluidRow(
           # Value box: sample size
           valueBox(
-            nrow(mimic_data), 
+            nrow(mimic_data_full), 
             "Total Patients", 
             icon = icon("hospital-user")
           )

@@ -133,11 +133,15 @@ ui <- dashboardPage(
                   status = "info",
                   plotOutput("scatterplot", height = 260)
               ),
-              valueBox(
-                '2012-01-01', 
-                "Current Date", 
-                icon = icon('calendar')
+              fluidRow(
+                valueBox(
+                  '2012-01-01', 
+                  "Current Date", 
+                  icon = icon('calendar')
+                )
               ),
+              h5("Patients with a high risk have a significant danger to their lives, they should be watched closely"),
+              h5("On each given date, patients with a higher risk score than other patients are at a greater risk of passing away"),
               # grid input, each grid is 12 x 12, can set width of boxes so if one box changes from 3->7 other ones move from 7 -> 3
               #dataTableOutput('tbl')
               DT::dataTableOutput("tbl")
@@ -150,18 +154,24 @@ ui <- dashboardPage(
         
         fluidRow(
           box(
-            status = "info",
-            plotOutput("scatterplot_debugger", height = 260)
-          ),
-        valueBox(
-          '2012-01-01', 
-          "Current Date", 
-          icon = icon('calendar')
-        )
-        , fluidRow(
-          DT::dataTableOutput("tbl_debugger")
+              status = "info",
+              plotOutput("scatterplot_debugger", height = 260)
+            ),
+            valueBox(
+              '2012-01-01', 
+              "Perspective Date of Chart", 
+              icon = icon('calendar')
+            ),
+            h5("Actual Date Left ICU: Square"),
+            h5("Actual Date Left Hospital: Rectangle"),
+            h5("Forecasted Date Left ICU: Dot"),
+            h5("Actual Date Passed Away: Star")
           )
-        )
+        , h5("Chart involves patients in the ICU on the perspective date")
+        # grid input, each grid is 12 x 12, can set width of boxes so if one box changes from 3->7 other ones move from 7 -> 3
+        #dataTableOutput('tbl')
+        , DT::dataTableOutput("tbl_debugger")
+
       )
     )
   )
@@ -227,6 +237,7 @@ server <- function(input, output) {
       ggplot() +
       geom_line(aes(x=date, y = value, color = Name, linetype = Risk_Class)) +
       scale_color_manual(values=colors_picked) +
+      ggtitle("ICU Wards Patient Risk Curves with Predicted Date to Leave ICU") +
       labs(x = 'Date', y = 'Risk Score (Cumulative Hazard)') +
       # Plot datapoints of interest (Last line has higher priority to override other dots)
       #geom_point(mapping= aes(date, Actual_Date_Leave_ICU), shape = 0) +
@@ -293,6 +304,7 @@ server <- function(input, output) {
       ggplot() +
       geom_line(aes(x=date, y = value, color = Name, linetype = Risk_Class)) +
       scale_color_manual(values=colors_picked) +
+      ggtitle("Past ICU Wards Patient Risk Curves with Predictions and Actuals") +
       labs(x = 'Date', y = 'Risk Score (Cumulative Hazard)') +
       # Plot datapoints of interest (Last line has higher priority to override other dots)
       geom_point(mapping= aes(date, Actual_Date_Leave_ICU), size =3, shape = 0) +

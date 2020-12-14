@@ -13,6 +13,10 @@ def main():
     # Read config file for library and param path
     with open(args.config, "r") as config_file:
         config = json.load(config_file)
+    model_type = config['type']
+    param_path = config['param_path']
+    with open(param_path, "r") as param_file:
+        param_dict = json.load(param_file)
 
 
 if __name__ == '__main__':

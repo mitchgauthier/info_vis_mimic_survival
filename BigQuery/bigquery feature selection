@@ -1,0 +1,76 @@
+## PHASE 2
+
+# Select Alarms and merge with Training Data
+
+select a.subject_id, a.itemid, charttime, label, category, value, valuenum, valueuom,
+from `physionet-data.mimiciii_clinical.chartevents` a
+inner join `physionet-data.mimiciii_clinical.d_items`b on a.itemid = b.itemid
+inner join `physionet-data.mimiciii_clinical.patients`c on a.subject_id = c.subject_id
+inner join `physionet-data.mimiciii_clinical.icustays`d on a.subject_id = d.subject_id
+inner join `mimic-292321.datasets.static_train_data` e on a.subject_id = e.subject_id
+where a.itemid in (5815,3450,8549,8518,5820,8554,5819,8553,3609,8532,5813,8547,3581,5817,8551)
+order by subject_id
+
+
+# Select Alarms and merge with Training Data
+
+select a.subject_id, a.itemid, charttime, label, category, value, valuenum, valueuom,
+from `physionet-data.mimiciii_clinical.chartevents` a
+inner join `physionet-data.mimiciii_clinical.d_items`b on a.itemid = b.itemid
+inner join `physionet-data.mimiciii_clinical.patients`c on a.subject_id = c.subject_id
+inner join `physionet-data.mimiciii_clinical.icustays`d on a.subject_id = d.subject_id
+inner join `mimic-292321.datasets.static_test_Data` e on a.subject_id = e.subject_id
+where a.itemid in (5815,3450,8549,8518,5820,8554,5819,8553,3609,8532,5813,8547,3581,5817,8551)
+order by subject_id
+
+# Find most frequent Chartevents Items to use for feature engineering
+
+select count(a.ITEMID) as count, a.itemid, label, category
+from `physionet-data.mimiciii_clinical.chartevents` a
+inner join `physionet-data.mimiciii_clinical.d_items`b on a.itemid = b.itemid
+group by a.itemid, a.itemid, label, category
+order by count desc
+
+## PHASE 2
+
+# Find most frequent diagnoses
+
+select count (diagnosis) as count, diagnosis
+from `physionet-data.mimiciii_clinical.d_icd_diagnoses` a
+inner join `physionet-data.mimiciii_clinical.diagnoses_icd` b
+on a.icd9_code = b.icd9_code
+inner join `physionet-data.mimiciii_clinical.admissions` c
+on b.subject_id = c.subject_id
+where hospital_expire_flag = 1
+group by diagnosis
+order by count desc
+
+select distinct(c.hadm_id), b.subject_id, diagnosis, admission_type, dischtime
+from `physionet-data.mimiciii_clinical.d_icd_diagnoses` a
+inner join `physionet-data.mimiciii_clinical.diagnoses_icd` b
+on a.icd9_code = b.icd9_code
+inner join `physionet-data.mimiciii_clinical.admissions` c
+on b.subject_id = c.subject_id
+order by c.hadm_id
+
+# ICD Title Counts
+
+select count (long_title) as count, long_title
+from `physionet-data.mimiciii_clinical.d_icd_diagnoses` a
+inner join `physionet-data.mimiciii_clinical.diagnoses_icd` b
+on a.icd9_code = b.icd9_code
+inner join `physionet-data.mimiciii_clinical.admissions` c
+on b.subject_id = c.subject_id
+where hospital_expire_flag = 1
+group by long_title
+order by count desc
+
+select count (b.icd9_code) as count, b.icd9_code
+from `physionet-data.mimiciii_clinical.d_icd_diagnoses` a
+inner join `physionet-data.mimiciii_clinical.diagnoses_icd` b
+on a.icd9_code = b.icd9_code
+inner join `physionet-data.mimiciii_clinical.admissions` c
+on b.subject_id = c.subject_id
+where hospital_expire_flag = 1
+group by b.icd9_code
+order by count desc

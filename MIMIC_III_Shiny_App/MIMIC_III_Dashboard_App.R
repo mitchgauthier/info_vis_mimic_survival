@@ -13,8 +13,6 @@ library(DT)
 # Full Mimic Data (Single Row Per Subject)
 mimic_data_full <- read_feather('./data/mimic_data_test.feather')
 len_data = 15
-#mimic_data_full <- read_feather('./data/mimic_data_test_WORKING.feather')
-#len_data = 334
 setnames(mimic_data_full, old = c('gender','subject_id','ICU_LOS','risk_class','diagnosis','TEST_date_forecast_los_icu','icu_admit_age','2012-01-01'), new = c('Gender','Name','Forecast ICU LOS','Risk_Class','Diagnosis','Forecast_Date_Leave_ICU','Age','Current_Risk_Score'))
 mimic_data_full$Forecast_Date_Leave_ICU <- as.Date(mimic_data_full$Forecast_Date_Leave_ICU, format='%Y-%m-%d')
 mimic_data_full$Gender <- as.factor(mimic_data_full$Gender)
@@ -140,7 +138,8 @@ ui <- dashboardPage(
                   icon = icon('calendar')
                 )
               ),
-              h5("Patients with a high risk have a significant danger to their lives, they should be watched closely"),
+              h5("Patients with a high risk have a very significant danger to their lives, they should be watched extremely closely"),
+              h5("Patients with a medium risk have a sigificant danger to their lives, they should be watched closely"),
               h5("On each given date, patients with a higher risk score than other patients are at a greater risk of passing away"),
               # grid input, each grid is 12 x 12, can set width of boxes so if one box changes from 3->7 other ones move from 7 -> 3
               #dataTableOutput('tbl')
